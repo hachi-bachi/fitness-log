@@ -77,3 +77,15 @@ td.num, th.num { text-align: right; }
 @media (max-width: 520px) {
   th, td { padding: 6px 4px; font-size: 0.9rem; }
 }
+
+.record-list { list-style: none; margin: 0; padding: 0; }
+.record-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e3e7eb;
+}
+.record-list li:last-child { border-bottom: 0; }
+.record-weight { font-weight: bold; color: #1d3a4f; }
+.record-detail { color: #52606d; font-size: 0.9rem; }

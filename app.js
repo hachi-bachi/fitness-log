@@ -168,6 +168,67 @@ function renderHistory() {
   container.appendChild(table);
 }
 
+// ----- Personal records -----
+
+// A record is the heaviest weight logged for an exercise. Exercise names are matched
+// ignoring case and extra spaces, and shown with the first spelling used. Ties go to more reps, then the earlier date.
+function computeRecords(list) {
+  const best = {};
+  const names = {};
+  list.forEach(function (w) {
+    const key = w.exercise.trim().toLowerCase();
+    const added = w.createdAt || 0;
+    // Show the spelling used the first time the exercise was logged.
+    if (!names[key] || added < names[key].added) {
+      names[key] = { name: w.exercise.trim(), added: added };
+    }
+    const current = best[key];
+    const beats = !current ||
+      w.weight > current.weight ||
+      (w.weight === current.weight && w.reps > current.reps) ||
+      (w.weight === current.weight && w.reps === current.reps && w.date < current.date);
+    if (beats) best[key] = w;
+  });
+  return Object.keys(best).sort().map(function (key) {
+    return { exercise: names[key].name, weight: best[key].weight, reps: best[key].reps, date: best[key].date };
+  });
+}
+
+function renderRecords() {
+  const container = document.getElementById("records");
+  container.textContent = "";
+  const records = computeRecords(loadWorkouts());
+
+  if (records.length === 0) {
+    const p = document.createElement("p");
+    p.className = "empty";
+    p.textContent = "Log a workout to see your personal records.";
+    container.appendChild(p);
+    return;
+  }
+
+  const ul = document.createElement("ul");
+  ul.className = "record-list";
+  records.forEach(function (w) {
+    const li = document.createElement("li");
+    const name = document.createElement("span");
+    name.textContent = w.exercise;
+    const detail = document.createElement("span");
+    const weight = document.createElement("span");
+    weight.className = "record-weight";
+    weight.textContent = w.weight + " lbs";
+    const extra = document.createElement("span");
+    extra.className = "record-detail";
+    extra.textContent = " for " + w.reps + " reps on " + formatDate(w.date);
+    detail.appendChild(weight);
+    detail.appendChild(extra);
+    li.appendChild(name);
+    li.appendChild(detail);
+    ul.appendChild(li);
+  });
+  container.appendChild(ul);
+}
+
 // ----- Form handling -----
 
 const form = document.getElementById("workout-form");
@@ -234,8 +295,10 @@ form.addEventListener("submit", function (event) {
   statusLine.textContent = "Added " + result.entry.exercise + ": " + result.entry.sets + " x " +
     result.entry.reps + " at " + result.entry.weight + " lbs.";
   renderHistory();
+  renderRecords();
   resetForm();
 });
 
 resetForm();
 renderHistory();
+renderRecords();

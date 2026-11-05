@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fitness Log</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Fitness Log</h1>
+    <p>Log workouts and review your training history.</p>
+  </header>
+  <main>
+    <section class="card" aria-labelledby="log-heading">
+      <h2 id="log-heading">Log a workout</h2>
+      <form id="workout-form" novalidate>
+        <div id="form-errors" class="error-box" role="alert" hidden></div>
+        <div class="field">
+          <label for="exercise">Exercise</label>
+          <input id="exercise" name="exercise" type="text" maxlength="50" placeholder="Bench Press" autocomplete="off">
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="sets">Sets</label>
+            <input id="sets" name="sets" type="text" inputmode="numeric" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="reps">Reps</label>
+            <input id="reps" name="reps" type="text" inputmode="numeric" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="weight">Weight (lbs)</label>
+            <input id="weight" name="weight" type="text" inputmode="decimal" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="date">Date</label>
+            <input id="date" name="date" type="date">
+          </div>
+        </div>
+        <button type="submit">Add Workout</button>
+        <p id="form-status" class="status" role="status"></p>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

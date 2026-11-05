@@ -75,6 +75,48 @@ function validateWorkout(raw, today) {
   };
 }
 
+// ----- Storage (browser localStorage) -----
+
+function isStoredWorkout(w) {
+  return w && typeof w.id === "string" && typeof w.exercise === "string" &&
+    Number.isFinite(w.sets) && Number.isFinite(w.reps) &&
+    Number.isFinite(w.weight) && isRealDate(String(w.date));
+}
+
+function loadWorkouts() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const data = JSON.parse(raw);
+    return Array.isArray(data) ? data.filter(isStoredWorkout) : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function saveWorkouts(list) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+function addWorkout(entry) {
+  const list = loadWorkouts();
+  list.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    exercise: entry.exercise,
+    sets: entry.sets,
+    reps: entry.reps,
+    weight: entry.weight,
+    date: entry.date,
+    createdAt: Date.now()
+  });
+  return saveWorkouts(list);
+}
+
 // ----- Form handling -----
 
 const form = document.getElementById("workout-form");
@@ -134,7 +176,15 @@ form.addEventListener("submit", function (event) {
     showErrors(result.errors);
     return;
   }
-  statusLine.textContent = "Entry is valid. Saving is not added yet.";
+  if (!addWorkout(result.entry)) {
+    showErrors([{ field: "exercise", message: "The workout could not be saved. Browser storage is unavailable." }]);
+    return;
+  }
+  statusLine.textContent = "Added " + result.entry.exercise + ": " + result.entry.sets + " x " +
+    result.entry.reps + " at " + result.entry.weight + " lbs.";
+
+  resetForm();
 });
 
 resetForm();
+

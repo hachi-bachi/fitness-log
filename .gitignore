@@ -1,0 +1,17 @@
+# Local environment files (never commit credentials)
+.env
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.vscode/
+.idea/
+
+# Dependencies and build output (none are used yet, listed for later sprints)
+node_modules/
+.venv/
+__pycache__/
+dist/
+build/

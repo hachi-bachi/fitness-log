@@ -117,6 +117,57 @@ function addWorkout(entry) {
   return saveWorkouts(list);
 }
 
+// ----- Workout history -----
+
+// Newest date first. Entries on the same date show the most recently added first.
+function sortedWorkouts(list) {
+  return list.slice().sort(function (a, b) {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    return (b.createdAt || 0) - (a.createdAt || 0);
+  });
+}
+
+function makeCell(tag, text, className) {
+  const cell = document.createElement(tag);
+  cell.textContent = text;
+  if (className) cell.className = className;
+  return cell;
+}
+
+function renderHistory() {
+  const container = document.getElementById("history");
+  container.textContent = "";
+  const list = sortedWorkouts(loadWorkouts());
+
+  if (list.length === 0) {
+    const p = document.createElement("p");
+    p.className = "empty";
+    p.textContent = "No workouts logged yet.";
+    container.appendChild(p);
+    return;
+  }
+
+  const table = document.createElement("table");
+  const head = document.createElement("tr");
+  head.appendChild(makeCell("th", "Date"));
+  head.appendChild(makeCell("th", "Exercise"));
+  head.appendChild(makeCell("th", "Sets", "num"));
+  head.appendChild(makeCell("th", "Reps", "num"));
+  head.appendChild(makeCell("th", "Weight (lbs)", "num"));
+  table.appendChild(head);
+
+  list.forEach(function (w) {
+    const row = document.createElement("tr");
+    row.appendChild(makeCell("td", formatDate(w.date)));
+    row.appendChild(makeCell("td", w.exercise));
+    row.appendChild(makeCell("td", String(w.sets), "num"));
+    row.appendChild(makeCell("td", String(w.reps), "num"));
+    row.appendChild(makeCell("td", String(w.weight), "num"));
+    table.appendChild(row);
+  });
+  container.appendChild(table);
+}
+
 // ----- Form handling -----
 
 const form = document.getElementById("workout-form");
@@ -182,9 +233,9 @@ form.addEventListener("submit", function (event) {
   }
   statusLine.textContent = "Added " + result.entry.exercise + ": " + result.entry.sets + " x " +
     result.entry.reps + " at " + result.entry.weight + " lbs.";
-
+  renderHistory();
   resetForm();
 });
 
 resetForm();
-
+renderHistory();

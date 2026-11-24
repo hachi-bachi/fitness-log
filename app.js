@@ -1,5 +1,7 @@
 import { todayISO, formatDate, isRealDate } from "./src/dates.js";
 import { validateWorkout } from "./src/validation.js";
+import { sortedWorkouts } from "./src/history.js";
+import { computeRecords } from "./src/records.js";
 
 const STORAGE_KEY = "fitnessLog.workouts";
 
@@ -47,14 +49,6 @@ function addWorkout(entry) {
 
 // ----- Workout history -----
 
-// Newest date first. Entries on the same date show the most recently added first.
-function sortedWorkouts(list) {
-  return list.slice().sort(function (a, b) {
-    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-    return (b.createdAt || 0) - (a.createdAt || 0);
-  });
-}
-
 function makeCell(tag, text, className) {
   const cell = document.createElement(tag);
   cell.textContent = text;
@@ -94,32 +88,6 @@ function renderHistory() {
     table.appendChild(row);
   });
   container.appendChild(table);
-}
-
-// ----- Personal records -----
-
-// A record is the heaviest weight logged for an exercise. Exercise names are matched
-// ignoring case and extra spaces, and shown with the first spelling used. Ties go to more reps, then the earlier date.
-function computeRecords(list) {
-  const best = {};
-  const names = {};
-  list.forEach(function (w) {
-    const key = w.exercise.trim().toLowerCase();
-    const added = w.createdAt || 0;
-    // Show the spelling used the first time the exercise was logged.
-    if (!names[key] || added < names[key].added) {
-      names[key] = { name: w.exercise.trim(), added: added };
-    }
-    const current = best[key];
-    const beats = !current ||
-      w.weight > current.weight ||
-      (w.weight === current.weight && w.reps > current.reps) ||
-      (w.weight === current.weight && w.reps === current.reps && w.date < current.date);
-    if (beats) best[key] = w;
-  });
-  return Object.keys(best).sort().map(function (key) {
-    return { exercise: names[key].name, weight: best[key].weight, reps: best[key].reps, date: best[key].date };
-  });
 }
 
 function renderRecords() {

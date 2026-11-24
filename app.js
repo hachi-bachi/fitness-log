@@ -4,6 +4,7 @@ import { sortedWorkouts, exerciseOptions, filterByExercise, resolveFilter } from
 import { computeRecords } from "./src/records.js";
 import { WorkoutRepository } from "./src/repository.js";
 import { workoutToForm } from "./src/editing.js";
+import { exerciseKey } from "./src/exercise.js";
 
 // ----- Storage -----
 
@@ -57,6 +58,7 @@ function makeButton(label, action, id, kind) {
 
 const filterRow = document.getElementById("filter-row");
 const filterSelect = document.getElementById("exercise-filter");
+const filterCount = document.getElementById("filter-count");
 
 // Rebuilds the "filter by exercise" list from the saved workouts and selects the current choice.
 function renderFilter(all) {
@@ -88,6 +90,7 @@ function renderHistory() {
   selectedExercise = resolveFilter(selectedExercise, all);
   renderFilter(all);
   const list = sortedWorkouts(filterByExercise(all, selectedExercise));
+  filterCount.textContent = selectedExercise ? filterSummary(list.length, all.length) : "";
 
   if (list.length === 0) {
     const p = document.createElement("p");
@@ -136,6 +139,11 @@ function renderHistory() {
     table.appendChild(row);
   });
   container.appendChild(table);
+}
+
+// Says how many workouts match the filter, for example "Showing 2 of 5 workouts."
+function filterSummary(shown, total) {
+  return "Showing " + shown + " of " + total + " workout" + (total === 1 ? "" : "s") + ".";
 }
 
 // ----- Deleting a workout -----
@@ -336,6 +344,9 @@ form.addEventListener("submit", function (event) {
   }
   statusLine.textContent = "Added " + result.entry.exercise + ": " + result.entry.sets + " x " +
     result.entry.reps + " at " + result.entry.weight + " lbs.";
+  if (selectedExercise && exerciseKey(result.entry.exercise) !== selectedExercise) {
+    statusLine.textContent += " It is hidden by the current filter.";
+  }
   renderHistory();
   renderRecords();
   resetForm();

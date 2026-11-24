@@ -108,3 +108,8 @@ tr.pending td { background: #fff8e6; }
   td.actions button { display: block; width: 100%; margin: 4px 0 0; }
   .confirm-text { display: block; }
 }
+
+/* Edit mode */
+.buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+#cancel-edit { padding: 10px 18px; font-size: 1rem; }
+tr.editing td { background: #eaf4fb; }

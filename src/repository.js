@@ -58,6 +58,26 @@ export class WorkoutRepository {
     return this.#save(kept);
   }
 
+  // Replaces the details of the workout with this id. Its id and the time it was first added stay
+  // the same, so its place among workouts on the same date does not change.
+  // Returns the updated workout, or null if it does not exist or the change could not be saved.
+  update(id, entry) {
+    const list = this.list();
+    const index = list.findIndex(function (w) { return w.id === id; });
+    if (index === -1) return null;
+    const updated = {
+      id: list[index].id,
+      exercise: entry.exercise,
+      sets: entry.sets,
+      reps: entry.reps,
+      weight: entry.weight,
+      date: entry.date,
+      createdAt: list[index].createdAt
+    };
+    list[index] = updated;
+    return this.#save(list) ? updated : null;
+  }
+
   #save(list) {
     try {
       this.storage.setItem(STORAGE_KEY, JSON.stringify(list));

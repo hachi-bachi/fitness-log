@@ -3,6 +3,7 @@ import { validateWorkout } from "./src/validation.js";
 import { sortedWorkouts } from "./src/history.js";
 import { computeRecords } from "./src/records.js";
 import { WorkoutRepository } from "./src/repository.js";
+import { workoutToForm } from "./src/editing.js";
 
 // ----- Storage -----
 
@@ -32,6 +33,8 @@ function makeCell(tag, text, className) {
 
 // The workout waiting for the user to confirm its deletion, or null.
 let pendingDeleteId = null;
+// The workout currently loaded into the form for editing, or null when adding a new one.
+let editingId = null;
 const historyBox = document.getElementById("history");
 const historyStatus = document.getElementById("history-status");
 
@@ -81,6 +84,8 @@ function renderHistory() {
     row.appendChild(makeCell("td", String(w.reps), "num"));
     row.appendChild(makeCell("td", String(w.weight), "num"));
 
+    if (w.id === editingId) row.classList.add("editing");
+
     const actions = document.createElement("td");
     actions.className = "actions";
     if (w.id === pendingDeleteId) {
@@ -89,6 +94,9 @@ function renderHistory() {
       actions.appendChild(makeButton("Yes, delete", "confirm-delete", w.id, "danger"));
       actions.appendChild(makeButton("Cancel", "cancel-delete", w.id, "secondary"));
     } else {
+      const edit = makeButton("Edit", "edit", w.id, "secondary");
+      edit.setAttribute("aria-label", "Edit " + w.exercise + " from " + formatDate(w.date));
+      actions.appendChild(edit);
       const del = makeButton("Delete", "ask-delete", w.id, "secondary");
       del.setAttribute("aria-label", "Delete " + w.exercise + " from " + formatDate(w.date));
       actions.appendChild(del);
@@ -104,6 +112,7 @@ function renderHistory() {
 function deleteWorkout(id) {
   const target = repo.list().find(function (w) { return w.id === id; });
   pendingDeleteId = null;
+  if (editingId === id) stopEditing();
   if (!target || !repo.remove(id)) {
     setHistoryStatus("That workout could not be deleted.", true);
   } else {
@@ -120,7 +129,9 @@ historyBox.addEventListener("click", function (event) {
   const action = button.dataset.action;
   setHistoryStatus("", false);
 
-  if (action === "ask-delete") {
+  if (action === "edit") {
+    startEdit(id);
+  } else if (action === "ask-delete") {
     pendingDeleteId = id;
     renderHistory();
     historyBox.querySelector('button[data-action="cancel-delete"]').focus();
@@ -177,6 +188,8 @@ const form = document.getElementById("workout-form");
 const errorBox = document.getElementById("form-errors");
 const statusLine = document.getElementById("form-status");
 const fieldIds = ["exercise", "sets", "reps", "weight", "date"];
+const submitButton = document.getElementById("submit-button");
+const cancelEditButton = document.getElementById("cancel-edit");
 
 function clearErrors() {
   errorBox.hidden = true;
@@ -220,6 +233,58 @@ function resetForm() {
   document.getElementById("date").max = todayISO();
 }
 
+// ----- Editing a workout -----
+
+function startEdit(id) {
+  const target = repo.list().find(function (w) { return w.id === id; });
+  if (!target) {
+    setHistoryStatus("That workout could not be found.", true);
+    renderHistory();
+    return;
+  }
+  pendingDeleteId = null;
+  editingId = id;
+  const values = workoutToForm(target);
+  fieldIds.forEach(function (field) {
+    document.getElementById(field).value = values[field];
+  });
+  clearErrors();
+  statusLine.textContent = "";
+  document.getElementById("log-heading").textContent = "Edit workout";
+  submitButton.textContent = "Save Changes";
+  cancelEditButton.hidden = false;
+  renderHistory();
+  document.getElementById("exercise").focus();
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function stopEditing() {
+  editingId = null;
+  clearErrors();
+  document.getElementById("log-heading").textContent = "Log a workout";
+  submitButton.textContent = "Add Workout";
+  cancelEditButton.hidden = true;
+  resetForm();
+  renderHistory();
+}
+
+function saveEdit(entry) {
+  const updated = repo.update(editingId, entry);
+  if (!updated) {
+    showErrors([{ field: "exercise", message: "The workout could not be updated. It may have been deleted, or browser storage is unavailable." }]);
+    return;
+  }
+  stopEditing();
+  renderRecords();
+  statusLine.textContent = "Updated " + updated.exercise + ": " + updated.sets + " x " +
+    updated.reps + " at " + updated.weight + " lbs.";
+}
+
+cancelEditButton.addEventListener("click", function () {
+  stopEditing();
+  statusLine.textContent = "Edit cancelled. Nothing was changed.";
+});
+
 form.addEventListener("submit", function (event) {
   event.preventDefault();
   clearErrors();
@@ -228,6 +293,10 @@ form.addEventListener("submit", function (event) {
   const result = validateWorkout(readForm(), todayISO());
   if (result.errors.length > 0) {
     showErrors(result.errors);
+    return;
+  }
+  if (editingId !== null) {
+    saveEdit(result.entry);
     return;
   }
   if (!repo.add(result.entry)) {

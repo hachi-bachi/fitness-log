@@ -1,6 +1,6 @@
 # Fitness Log
 
-Fitness Log is a web application for logging workouts and reviewing training history. It supports logging a workout, viewing the saved history in date order, seeing the personal record for each exercise, and deleting a workout you logged by mistake. Sprint 2 adds deleting (and, in the same sprint, editing and filtering).
+Fitness Log is a web application for logging workouts and reviewing training history. It supports logging a workout, viewing the saved history in date order, seeing the personal record for each exercise, deleting a workout you logged by mistake, and editing a workout to fix its details. Sprint 2 adds deleting and editing workouts.
 
 Author: Hassan Janjua
 
@@ -68,6 +68,7 @@ The tests are in the `tests/` folder and need no browser. All tests should pass 
 - `src/dates.js`: date helpers
 - `src/validation.js`: checks the form values for a workout
 - `src/history.js`: orders the workout history
+- `src/editing.js`: turns a saved workout into form values for editing
 - `src/records.js`: works out the personal record for each exercise
 - `src/repository.js`: saves and loads workouts through a storage object it is given (localStorage in the browser, a fake in tests)
 - `tests/`: automated tests, one file per module
@@ -88,6 +89,15 @@ The tests are in the `tests/` folder and need no browser. All tests should pass 
 4. Select **Delete** again, then **Yes, delete**. A message confirms the deletion, the row disappears, and Personal records drops back to 135 lbs.
 5. Refresh the page. The deleted workout stays deleted.
 
+## Trying the edit feature (Sprint 2)
+
+1. Add a workout such as `Bench Press`, 3 sets, 8 reps, 135 lbs.
+2. In "Workout history", select **Edit** on that row. The form at the top fills with its values, the heading changes to "Edit workout", the button says **Save Changes**, and the row is highlighted.
+3. Change the weight to `145` and select **Save Changes**. A confirmation appears, the row shows 145 lbs, and Personal records updates.
+4. Select **Edit** again and enter `0` sets, then **Save Changes**. An error appears and the workout is not changed.
+5. Select **Cancel edit**. The form goes back to "Log a workout" and nothing is changed.
+6. Refresh the page. The edited workout keeps its new values.
+
 No sample data file is needed. All example data above is fictional.
 
 ## Where data is stored
@@ -96,10 +106,10 @@ Workouts are saved in your browser's localStorage under the key `fitnessLog.work
 
 ## Known limitations
 
-- Workouts cannot be edited yet.
+- Editing replaces all of a workout's details at once. There is no edit history and no undo.
 - Deleting a workout cannot be undone.
 - Weight is in pounds only.
 - A bodyweight exercise logged at 0 lbs shows a record of 0 lbs, because records are based on weight.
-- Weekly training volume and training streaks are planned for a later sprint.
+- Filtering history by exercise, weekly training volume, and training streaks are planned for a later sprint.
 - Data is not shared between browsers or computers.
 - Opening `localhost:8000` and `127.0.0.1:8000` uses separate storage, so use the same address each time.

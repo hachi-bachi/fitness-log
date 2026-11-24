@@ -1,51 +1,25 @@
-import { todayISO, formatDate, isRealDate } from "./src/dates.js";
+import { todayISO, formatDate } from "./src/dates.js";
 import { validateWorkout } from "./src/validation.js";
 import { sortedWorkouts } from "./src/history.js";
 import { computeRecords } from "./src/records.js";
+import { WorkoutRepository } from "./src/repository.js";
 
-const STORAGE_KEY = "fitnessLog.workouts";
+// ----- Storage -----
 
-// ----- Storage (browser localStorage) -----
-
-function isStoredWorkout(w) {
-  return w && typeof w.id === "string" && typeof w.exercise === "string" &&
-    Number.isFinite(w.sets) && Number.isFinite(w.reps) &&
-    Number.isFinite(w.weight) && isRealDate(String(w.date));
-}
-
-function loadWorkouts() {
+// localStorage can be missing or blocked (some private modes). Fall back to a storage that
+// reads as empty and refuses to save, so the app shows its normal "could not be saved" message.
+function browserStorage() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const data = JSON.parse(raw);
-    return Array.isArray(data) ? data.filter(isStoredWorkout) : [];
+    return window.localStorage;
   } catch (err) {
-    return [];
+    return {
+      getItem: function () { return null; },
+      setItem: function () { throw new Error("Storage is unavailable."); }
+    };
   }
 }
 
-function saveWorkouts(list) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
-
-function addWorkout(entry) {
-  const list = loadWorkouts();
-  list.push({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    exercise: entry.exercise,
-    sets: entry.sets,
-    reps: entry.reps,
-    weight: entry.weight,
-    date: entry.date,
-    createdAt: Date.now()
-  });
-  return saveWorkouts(list);
-}
+const repo = new WorkoutRepository(browserStorage());
 
 // ----- Workout history -----
 
@@ -59,7 +33,7 @@ function makeCell(tag, text, className) {
 function renderHistory() {
   const container = document.getElementById("history");
   container.textContent = "";
-  const list = sortedWorkouts(loadWorkouts());
+  const list = sortedWorkouts(repo.list());
 
   if (list.length === 0) {
     const p = document.createElement("p");
@@ -93,7 +67,7 @@ function renderHistory() {
 function renderRecords() {
   const container = document.getElementById("records");
   container.textContent = "";
-  const records = computeRecords(loadWorkouts());
+  const records = computeRecords(repo.list());
 
   if (records.length === 0) {
     const p = document.createElement("p");
@@ -184,7 +158,7 @@ form.addEventListener("submit", function (event) {
     showErrors(result.errors);
     return;
   }
-  if (!addWorkout(result.entry)) {
+  if (!repo.add(result.entry)) {
     showErrors([{ field: "exercise", message: "The workout could not be saved. Browser storage is unavailable." }]);
     return;
   }

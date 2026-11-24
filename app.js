@@ -30,8 +30,28 @@ function makeCell(tag, text, className) {
   return cell;
 }
 
+// The workout waiting for the user to confirm its deletion, or null.
+let pendingDeleteId = null;
+const historyBox = document.getElementById("history");
+const historyStatus = document.getElementById("history-status");
+
+function setHistoryStatus(message, isError) {
+  historyStatus.textContent = message;
+  historyStatus.classList.toggle("error", Boolean(isError));
+}
+
+function makeButton(label, action, id, kind) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = label;
+  button.className = kind;
+  button.dataset.action = action;
+  button.dataset.id = id;
+  return button;
+}
+
 function renderHistory() {
-  const container = document.getElementById("history");
+  const container = historyBox;
   container.textContent = "";
   const list = sortedWorkouts(repo.list());
 
@@ -50,6 +70,7 @@ function renderHistory() {
   head.appendChild(makeCell("th", "Sets", "num"));
   head.appendChild(makeCell("th", "Reps", "num"));
   head.appendChild(makeCell("th", "Weight (lbs)", "num"));
+  head.appendChild(makeCell("th", "Actions"));
   table.appendChild(head);
 
   list.forEach(function (w) {
@@ -59,10 +80,61 @@ function renderHistory() {
     row.appendChild(makeCell("td", String(w.sets), "num"));
     row.appendChild(makeCell("td", String(w.reps), "num"));
     row.appendChild(makeCell("td", String(w.weight), "num"));
+
+    const actions = document.createElement("td");
+    actions.className = "actions";
+    if (w.id === pendingDeleteId) {
+      row.classList.add("pending");
+      actions.appendChild(makeCell("span", "Delete this workout?", "confirm-text"));
+      actions.appendChild(makeButton("Yes, delete", "confirm-delete", w.id, "danger"));
+      actions.appendChild(makeButton("Cancel", "cancel-delete", w.id, "secondary"));
+    } else {
+      const del = makeButton("Delete", "ask-delete", w.id, "secondary");
+      del.setAttribute("aria-label", "Delete " + w.exercise + " from " + formatDate(w.date));
+      actions.appendChild(del);
+    }
+    row.appendChild(actions);
     table.appendChild(row);
   });
   container.appendChild(table);
 }
+
+// ----- Deleting a workout -----
+
+function deleteWorkout(id) {
+  const target = repo.list().find(function (w) { return w.id === id; });
+  pendingDeleteId = null;
+  if (!target || !repo.remove(id)) {
+    setHistoryStatus("That workout could not be deleted.", true);
+  } else {
+    setHistoryStatus("Deleted " + target.exercise + " from " + formatDate(target.date) + ".", false);
+  }
+  renderHistory();
+  renderRecords();
+}
+
+historyBox.addEventListener("click", function (event) {
+  const button = event.target.closest("button[data-action]");
+  if (!button) return;
+  const id = button.dataset.id;
+  const action = button.dataset.action;
+  setHistoryStatus("", false);
+
+  if (action === "ask-delete") {
+    pendingDeleteId = id;
+    renderHistory();
+    historyBox.querySelector('button[data-action="cancel-delete"]').focus();
+  } else if (action === "cancel-delete") {
+    pendingDeleteId = null;
+    renderHistory();
+    const again = historyBox.querySelector('button[data-id="' + id + '"]');
+    if (again) again.focus();
+  } else if (action === "confirm-delete") {
+    deleteWorkout(id);
+  }
+});
+
+// ----- Personal records -----
 
 function renderRecords() {
   const container = document.getElementById("records");

@@ -1,5 +1,7 @@
 // Pure function that works out the personal record for each exercise.
 
+import { exerciseKey } from "./exercise.js";
+
 // ----- Personal records -----
 
 // A record is the heaviest weight logged for an exercise. Exercise names are matched
@@ -8,7 +10,7 @@ export function computeRecords(list) {
   const best = {};
   const names = {};
   list.forEach(function (w) {
-    const key = w.exercise.trim().toLowerCase();
+    const key = exerciseKey(w.exercise);
     const added = w.createdAt || 0;
     // Show the spelling used the first time the exercise was logged.
     if (!names[key] || added < names[key].added) {

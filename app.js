@@ -1,28 +1,6 @@
-"use strict";
+import { todayISO, formatDate, isRealDate } from "./src/dates.js";
 
 const STORAGE_KEY = "fitnessLog.workouts";
-
-// Returns today's date as YYYY-MM-DD in the user's local time zone.
-function todayISO() {
-  const d = new Date();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return d.getFullYear() + "-" + month + "-" + day;
-}
-
-// Formats a YYYY-MM-DD string for display without shifting the day across time zones.
-function formatDate(iso) {
-  const parts = iso.split("-").map(Number);
-  const d = new Date(parts[0], parts[1] - 1, parts[2]);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
-
-function isRealDate(iso) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
-  const parts = iso.split("-").map(Number);
-  const d = new Date(parts[0], parts[1] - 1, parts[2]);
-  return d.getFullYear() === parts[0] && d.getMonth() === parts[1] - 1 && d.getDate() === parts[2];
-}
 
 // Checks the raw form values. Returns { errors, entry }.
 // errors is a list of { field, message }. entry is null when any error exists.

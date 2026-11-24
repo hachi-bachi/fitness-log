@@ -112,6 +112,7 @@ function renderHistory() {
 function deleteWorkout(id) {
   const target = repo.list().find(function (w) { return w.id === id; });
   pendingDeleteId = null;
+  if (editingId === id) stopEditing();
   if (!target || !repo.remove(id)) {
     setHistoryStatus("That workout could not be deleted.", true);
   } else {

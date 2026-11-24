@@ -57,3 +57,38 @@ test("add reports failure with null when storage cannot save", () => {
   const repo = makeRepo(new BrokenStorage());
   assert.equal(repo.add(ENTRY), null);
 });
+
+test("remove deletes only the workout with that id and saves the change", () => {
+  const repo = makeRepo(new MemoryStorage());
+  const first = repo.add(ENTRY);
+  const second = repo.add(Object.assign({}, ENTRY, { exercise: "Squat" }));
+  assert.equal(repo.remove(first.id), true);
+  assert.deepEqual(repo.list(), [second]);
+});
+
+test("remove survives a reload because it is saved to storage", () => {
+  const storage = new MemoryStorage();
+  const repo = makeRepo(storage);
+  const saved = repo.add(ENTRY);
+  repo.remove(saved.id);
+  assert.deepEqual(new WorkoutRepository(storage).list(), []);
+});
+
+test("remove with an id that does not exist returns false and writes nothing", () => {
+  const storage = new MemoryStorage();
+  const repo = makeRepo(storage);
+  repo.add(ENTRY);
+  const writesBefore = storage.writes;
+  assert.equal(repo.remove("no-such-id"), false);
+  assert.equal(storage.writes, writesBefore);
+  assert.equal(repo.list().length, 1);
+});
+
+test("remove returns false when the change cannot be saved", () => {
+  const good = { id: "a", exercise: "Squat", sets: 4, reps: 5, weight: 185, date: "2026-11-02", createdAt: 1 };
+  const storage = new BrokenStorage();
+  storage.getItem = () => JSON.stringify([good]);
+  const repo = makeRepo(storage);
+  assert.equal(repo.remove("a"), false);
+  assert.equal(repo.list().length, 1);
+});

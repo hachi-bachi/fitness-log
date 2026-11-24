@@ -50,6 +50,14 @@ export class WorkoutRepository {
     return this.#save(list) ? workout : null;
   }
 
+  // Deletes the workout with this id. Returns true only if it existed and the change was saved.
+  remove(id) {
+    const list = this.list();
+    const kept = list.filter(function (w) { return w.id !== id; });
+    if (kept.length === list.length) return false;
+    return this.#save(kept);
+  }
+
   #save(list) {
     try {
       this.storage.setItem(STORAGE_KEY, JSON.stringify(list));

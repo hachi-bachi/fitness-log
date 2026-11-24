@@ -1,6 +1,6 @@
 # Fitness Log
 
-Fitness Log is a web application for logging workouts and reviewing training history. It supports logging a workout, viewing the saved history in date order, seeing the personal record for each exercise, deleting a workout you logged by mistake, and editing a workout to fix its details. Sprint 2 adds deleting and editing workouts.
+Fitness Log is a web application for logging workouts and reviewing training history. It supports logging a workout, viewing the saved history in date order, seeing the personal record for each exercise, deleting a workout you logged by mistake, editing a workout to fix its details, and filtering the history to one exercise. Sprint 2 adds deleting, editing, and filtering the history by exercise.
 
 Author: Hassan Janjua
 
@@ -67,7 +67,8 @@ The tests are in the `tests/` folder and need no browser. All tests should pass 
 - `app.js`: connects the page to the logic below (reading the form, drawing the tables, handling clicks)
 - `src/dates.js`: date helpers
 - `src/validation.js`: checks the form values for a workout
-- `src/history.js`: orders the workout history
+- `src/exercise.js`: the rule for treating exercise names as the same exercise
+- `src/history.js`: orders and filters the workout history
 - `src/editing.js`: turns a saved workout into form values for editing
 - `src/records.js`: works out the personal record for each exercise
 - `src/repository.js`: saves and loads workouts through a storage object it is given (localStorage in the browser, a fake in tests)
@@ -98,6 +99,16 @@ The tests are in the `tests/` folder and need no browser. All tests should pass 
 5. Select **Cancel edit**. The form goes back to "Log a workout" and nothing is changed.
 6. Refresh the page. The edited workout keeps its new values.
 
+## Trying the filter feature (Sprint 2)
+
+1. Add three workouts: `Bench Press`, `Squat`, and `bench press` (lowercase) on different dates.
+2. In "Workout history", open the **Filter by exercise** list. It shows "All exercises", "Bench Press", and "Squat". The two bench press spellings count as one exercise.
+3. Choose **Bench Press**. Only the two bench press workouts show, newest first, with the message "Showing 2 of 3 workouts."
+4. With the filter on, add a `Squat` workout. A note says it is hidden by the current filter. Choose **All exercises** and it appears.
+5. Choose **Squat**, then delete every squat workout. The filter returns to "All exercises" by itself.
+
+Filtering only changes what the history shows. Your saved workouts and Personal records are not affected.
+
 No sample data file is needed. All example data above is fictional.
 
 ## Where data is stored
@@ -110,6 +121,7 @@ Workouts are saved in your browser's localStorage under the key `fitnessLog.work
 - Deleting a workout cannot be undone.
 - Weight is in pounds only.
 - A bodyweight exercise logged at 0 lbs shows a record of 0 lbs, because records are based on weight.
-- Filtering history by exercise, weekly training volume, and training streaks are planned for a later sprint.
+- The filter picks one exercise at a time. It does not filter by date, and it is not remembered after a page refresh.
+- Weekly training volume and training streaks are planned for a later sprint.
 - Data is not shared between browsers or computers.
 - Opening `localhost:8000` and `127.0.0.1:8000` uses separate storage, so use the same address each time.

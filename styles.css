@@ -113,3 +113,17 @@ tr.pending td { background: #fff8e6; }
 .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 #cancel-edit { padding: 10px 18px; font-size: 1rem; }
 tr.editing td { background: #eaf4fb; }
+
+/* Exercise filter */
+.filter-row { margin-bottom: 12px; }
+.filter-row select {
+  width: 100%;
+  padding: 8px;
+  font-size: 1rem;
+  border: 1px solid #9aa5b1;
+  border-radius: 4px;
+  background: #ffffff;
+}
+@media (min-width: 521px) {
+  .filter-row select { max-width: 320px; }
+}

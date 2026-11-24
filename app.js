@@ -1,131 +1,27 @@
-"use strict";
+import { todayISO, formatDate } from "./src/dates.js";
+import { validateWorkout } from "./src/validation.js";
+import { sortedWorkouts } from "./src/history.js";
+import { computeRecords } from "./src/records.js";
+import { WorkoutRepository } from "./src/repository.js";
 
-const STORAGE_KEY = "fitnessLog.workouts";
+// ----- Storage -----
 
-// Returns today's date as YYYY-MM-DD in the user's local time zone.
-function todayISO() {
-  const d = new Date();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return d.getFullYear() + "-" + month + "-" + day;
-}
-
-// Formats a YYYY-MM-DD string for display without shifting the day across time zones.
-function formatDate(iso) {
-  const parts = iso.split("-").map(Number);
-  const d = new Date(parts[0], parts[1] - 1, parts[2]);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
-
-function isRealDate(iso) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
-  const parts = iso.split("-").map(Number);
-  const d = new Date(parts[0], parts[1] - 1, parts[2]);
-  return d.getFullYear() === parts[0] && d.getMonth() === parts[1] - 1 && d.getDate() === parts[2];
-}
-
-// Checks the raw form values. Returns { errors, entry }.
-// errors is a list of { field, message }. entry is null when any error exists.
-function validateWorkout(raw, today) {
-  const errors = [];
-  const exercise = raw.exercise.trim();
-  const sets = raw.sets.trim();
-  const reps = raw.reps.trim();
-  const weight = raw.weight.trim();
-  const date = raw.date.trim();
-
-  if (exercise === "") {
-    errors.push({ field: "exercise", message: "Enter an exercise name." });
-  } else if (exercise.length > 50) {
-    errors.push({ field: "exercise", message: "Exercise name must be 50 characters or fewer." });
-  }
-
-  if (!/^\d+$/.test(sets) || Number(sets) < 1 || Number(sets) > 99) {
-    errors.push({ field: "sets", message: "Sets must be a whole number from 1 to 99." });
-  }
-
-  if (!/^\d+$/.test(reps) || Number(reps) < 1 || Number(reps) > 999) {
-    errors.push({ field: "reps", message: "Reps must be a whole number from 1 to 999." });
-  }
-
-  if (!/^\d+(\.\d{1,2})?$/.test(weight) || Number(weight) > 2000) {
-    errors.push({ field: "weight", message: "Weight must be a number from 0 to 2000 (lbs)." });
-  }
-
-  if (date === "") {
-    errors.push({ field: "date", message: "Choose a date." });
-  } else if (!isRealDate(date)) {
-    errors.push({ field: "date", message: "Enter a valid date." });
-  } else if (date > today) {
-    errors.push({ field: "date", message: "Date cannot be in the future." });
-  }
-
-  if (errors.length > 0) {
-    return { errors: errors, entry: null };
-  }
-  return {
-    errors: [],
-    entry: {
-      exercise: exercise,
-      sets: Number(sets),
-      reps: Number(reps),
-      weight: Number(weight),
-      date: date
-    }
-  };
-}
-
-// ----- Storage (browser localStorage) -----
-
-function isStoredWorkout(w) {
-  return w && typeof w.id === "string" && typeof w.exercise === "string" &&
-    Number.isFinite(w.sets) && Number.isFinite(w.reps) &&
-    Number.isFinite(w.weight) && isRealDate(String(w.date));
-}
-
-function loadWorkouts() {
+// localStorage can be missing or blocked (some private modes). Fall back to a storage that
+// reads as empty and refuses to save, so the app shows its normal "could not be saved" message.
+function browserStorage() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const data = JSON.parse(raw);
-    return Array.isArray(data) ? data.filter(isStoredWorkout) : [];
+    return window.localStorage;
   } catch (err) {
-    return [];
+    return {
+      getItem: function () { return null; },
+      setItem: function () { throw new Error("Storage is unavailable."); }
+    };
   }
 }
 
-function saveWorkouts(list) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
-
-function addWorkout(entry) {
-  const list = loadWorkouts();
-  list.push({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    exercise: entry.exercise,
-    sets: entry.sets,
-    reps: entry.reps,
-    weight: entry.weight,
-    date: entry.date,
-    createdAt: Date.now()
-  });
-  return saveWorkouts(list);
-}
+const repo = new WorkoutRepository(browserStorage());
 
 // ----- Workout history -----
-
-// Newest date first. Entries on the same date show the most recently added first.
-function sortedWorkouts(list) {
-  return list.slice().sort(function (a, b) {
-    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-    return (b.createdAt || 0) - (a.createdAt || 0);
-  });
-}
 
 function makeCell(tag, text, className) {
   const cell = document.createElement(tag);
@@ -134,10 +30,30 @@ function makeCell(tag, text, className) {
   return cell;
 }
 
+// The workout waiting for the user to confirm its deletion, or null.
+let pendingDeleteId = null;
+const historyBox = document.getElementById("history");
+const historyStatus = document.getElementById("history-status");
+
+function setHistoryStatus(message, isError) {
+  historyStatus.textContent = message;
+  historyStatus.classList.toggle("error", Boolean(isError));
+}
+
+function makeButton(label, action, id, kind) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = label;
+  button.className = kind;
+  button.dataset.action = action;
+  button.dataset.id = id;
+  return button;
+}
+
 function renderHistory() {
-  const container = document.getElementById("history");
+  const container = historyBox;
   container.textContent = "";
-  const list = sortedWorkouts(loadWorkouts());
+  const list = sortedWorkouts(repo.list());
 
   if (list.length === 0) {
     const p = document.createElement("p");
@@ -154,6 +70,7 @@ function renderHistory() {
   head.appendChild(makeCell("th", "Sets", "num"));
   head.appendChild(makeCell("th", "Reps", "num"));
   head.appendChild(makeCell("th", "Weight (lbs)", "num"));
+  head.appendChild(makeCell("th", "Actions"));
   table.appendChild(head);
 
   list.forEach(function (w) {
@@ -163,41 +80,66 @@ function renderHistory() {
     row.appendChild(makeCell("td", String(w.sets), "num"));
     row.appendChild(makeCell("td", String(w.reps), "num"));
     row.appendChild(makeCell("td", String(w.weight), "num"));
+
+    const actions = document.createElement("td");
+    actions.className = "actions";
+    if (w.id === pendingDeleteId) {
+      row.classList.add("pending");
+      actions.appendChild(makeCell("span", "Delete this workout?", "confirm-text"));
+      actions.appendChild(makeButton("Yes, delete", "confirm-delete", w.id, "danger"));
+      actions.appendChild(makeButton("Cancel", "cancel-delete", w.id, "secondary"));
+    } else {
+      const del = makeButton("Delete", "ask-delete", w.id, "secondary");
+      del.setAttribute("aria-label", "Delete " + w.exercise + " from " + formatDate(w.date));
+      actions.appendChild(del);
+    }
+    row.appendChild(actions);
     table.appendChild(row);
   });
   container.appendChild(table);
 }
 
-// ----- Personal records -----
+// ----- Deleting a workout -----
 
-// A record is the heaviest weight logged for an exercise. Exercise names are matched
-// ignoring case and extra spaces, and shown with the first spelling used. Ties go to more reps, then the earlier date.
-function computeRecords(list) {
-  const best = {};
-  const names = {};
-  list.forEach(function (w) {
-    const key = w.exercise.trim().toLowerCase();
-    const added = w.createdAt || 0;
-    // Show the spelling used the first time the exercise was logged.
-    if (!names[key] || added < names[key].added) {
-      names[key] = { name: w.exercise.trim(), added: added };
-    }
-    const current = best[key];
-    const beats = !current ||
-      w.weight > current.weight ||
-      (w.weight === current.weight && w.reps > current.reps) ||
-      (w.weight === current.weight && w.reps === current.reps && w.date < current.date);
-    if (beats) best[key] = w;
-  });
-  return Object.keys(best).sort().map(function (key) {
-    return { exercise: names[key].name, weight: best[key].weight, reps: best[key].reps, date: best[key].date };
-  });
+function deleteWorkout(id) {
+  const target = repo.list().find(function (w) { return w.id === id; });
+  pendingDeleteId = null;
+  if (!target || !repo.remove(id)) {
+    setHistoryStatus("That workout could not be deleted.", true);
+  } else {
+    setHistoryStatus("Deleted " + target.exercise + " from " + formatDate(target.date) + ".", false);
+  }
+  renderHistory();
+  renderRecords();
 }
+
+historyBox.addEventListener("click", function (event) {
+  const button = event.target.closest("button[data-action]");
+  if (!button) return;
+  const id = button.dataset.id;
+  const action = button.dataset.action;
+  setHistoryStatus("", false);
+
+  if (action === "ask-delete") {
+    pendingDeleteId = id;
+    renderHistory();
+    historyBox.querySelector('button[data-action="cancel-delete"]').focus();
+  } else if (action === "cancel-delete") {
+    pendingDeleteId = null;
+    renderHistory();
+    const again = historyBox.querySelector('button[data-id="' + id + '"]');
+    if (again) again.focus();
+  } else if (action === "confirm-delete") {
+    deleteWorkout(id);
+  }
+});
+
+// ----- Personal records -----
 
 function renderRecords() {
   const container = document.getElementById("records");
   container.textContent = "";
-  const records = computeRecords(loadWorkouts());
+  const records = computeRecords(repo.list());
 
   if (records.length === 0) {
     const p = document.createElement("p");
@@ -288,7 +230,7 @@ form.addEventListener("submit", function (event) {
     showErrors(result.errors);
     return;
   }
-  if (!addWorkout(result.entry)) {
+  if (!repo.add(result.entry)) {
     showErrors([{ field: "exercise", message: "The workout could not be saved. Browser storage is unavailable." }]);
     return;
   }

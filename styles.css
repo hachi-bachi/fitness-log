@@ -67,6 +67,7 @@ button:hover { background: #165a87; }
 }
 .error-box ul { margin: 0; padding-left: 20px; }
 .status { min-height: 1.5em; margin: 12px 0 0; color: #1b6b3a; }
+#history-status { margin: 0 0 8px; }
 
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 8px; text-align: left; border-bottom: 1px solid #e3e7eb; }
@@ -89,3 +90,21 @@ td.num, th.num { text-align: right; }
 .record-list li:last-child { border-bottom: 0; }
 .record-weight { font-weight: bold; color: #1d3a4f; }
 .record-detail { color: #52606d; font-size: 0.9rem; }
+
+/* Delete controls in the history table */
+td.actions { white-space: nowrap; }
+td.actions button { margin-left: 6px; }
+button.secondary, button.danger { padding: 6px 12px; font-size: 0.9rem; }
+button.secondary { color: #1d3a4f; background: #e3e9ee; }
+button.secondary:hover { background: #d3dce3; }
+button.danger { background: #b3261e; }
+button.danger:hover { background: #8f1e18; }
+tr.pending td { background: #fff8e6; }
+.confirm-text { margin-right: 8px; font-size: 0.9rem; }
+.status.error { color: #b3261e; }
+
+@media (max-width: 520px) {
+  td.actions { white-space: normal; }
+  td.actions button { display: block; width: 100%; margin: 4px 0 0; }
+  .confirm-text { display: block; }
+}
